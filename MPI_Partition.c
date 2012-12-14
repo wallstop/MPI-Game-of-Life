@@ -29,7 +29,7 @@ int localBoard_Size;
 MPI_Comm updatedComm;
 MPI_Group workingProcesses;
 
-void** allocatedMemory;
+char** allocatedMemory;
 int numberOfMemoryAllocations;
 
 //struct partition * partitionArray;
@@ -231,7 +231,7 @@ void initializeBoard(int argc, char ** argv)
             }
         }
 
-        allocatedMemory[i] = (void*)curLoopBoard;
+        allocatedMemory[i] = curLoopBoard;
 
         MPI_Isend(curLoopBoard, curLoopBoard_Size, MPI_CHAR, i, BOARD_MESSAGE, MPI_COMM_WORLD, &lastRequest);
     }
@@ -326,7 +326,7 @@ void calculateBoard()
                         break;
                     }
 
-                    allocatedMemory[numberOfMemoryAllocations++] = (void*)sendEdge;
+                    allocatedMemory[numberOfMemoryAllocations++] = sendEdge;
 
                     MPI_Isend(sendEdge, size, MPI_CHAR, myNeighborIDs[j], tag, MPI_COMM_WORLD, &lastRequest);
                 }
