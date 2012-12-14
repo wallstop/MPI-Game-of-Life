@@ -23,3 +23,21 @@ Here, '*' represents a living cell, and '.' represents a dead one
 
 to compile, call "mpicc MPI_Partition.c GeometrySplitter.c -std=c99"
 and to run, call "mpirun -n 2 a.out TestBoard.txt" where TestBoard.txt is the board file and 2 is the number of processes requested
+
+
+GeometrySplitter.c offers two handy methods:
+
+	struct partition *generateBoard(int width, int length, int *processes);
+
+		Given a width, length, and a requested number of partitions, this will create a partition arrangement. The number of partitions requested may exceed the 			number of partitions that was generated, so the number of partitions is passed by reference. This number is updated to represent the actual number of 			partitions created.
+		A pointer to an array of partitions is returned, each containing their start coordinates and length in a given direction.
+		This is very useful for dividing a two dimensional region into some number of partitions (both for MPI and for threading purposes in Game of Life)
+
+	int *neighorList(int partitionNumber);
+
+		Given some partitionNumber, this function will return a pointer to an integer array of size 8 with 0-8 corresponding to NW,N,NE,W,E,SW,S,SE respectively.
+		The value at index 0-8 correspond to the index in the partitionArray that is in that direction (or, more easily, the partitionNumber in that direction)
+		A value of -1 indicates no bordering partition in that direction.
+		NOTE: Do not run neighborList() until generateBoard() has been called. This will result in undefined behavior.
+	
+
