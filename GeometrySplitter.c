@@ -437,7 +437,7 @@ int * neighborList(int partitionNumber)
 }
 
 /* Partitions the board and returns a struct array of the partitions. Modifies processes as it sees fit */
-struct partition * generateBoard(int width, int length, int * processes)
+struct partition *generateBoard(int width, int length, int *processes)
 {
     widthX = width;
     widthY = length;
