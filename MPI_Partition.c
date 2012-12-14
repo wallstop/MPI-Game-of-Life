@@ -250,7 +250,8 @@ void calculateBoard()
     int memoryUsed;
 
     char * sendEdge;
-    int size;
+    int sendSize;
+    int recvSize;
     int tag;
 
     char * recvEdge;
@@ -272,60 +273,60 @@ void calculateBoard()
                     case 0:
                         sendEdge = malloc(sizeof(char) * 1);
                         sendEdge[0] = localBoard[myCoords.lengthX + 3];
-                        size = 1;
+                        sendSize = 1;
                         tag = SE_UPDATE;
                         break;
                     case 1:
                         sendEdge = malloc(sizeof(char) * myCoords.lengthX);
                         for(int k = 0; k < myCoords.lengthX; k++)
                             sendEdge[k] = localBoard[myCoords.lengthX + 3 + k];
-                        size = myCoords.lengthX;
+                        sendSize = myCoords.lengthX;
                         tag = S_UPDATE;
                         break;
                     case 2:
                         sendEdge = malloc(sizeof(char) * 1);
                         sendEdge[0] = localBoard[myCoords.lengthX + 2 + myCoords.lengthX];
-                        size = 1;
+                        sendSize = 1;
                         tag = SW_UPDATE;
                         break;
                     case 3:
                         sendEdge = malloc(sizeof(char) * myCoords.lengthY);
                         for(int k = 0; k < myCoords.lengthY; k++)
                             sendEdge[k] = localBoard[(myCoords.lengthX + 3) + k * (myCoords.lengthX + 2)];
-                        size = myCoords.lengthY;
+                        sendSize = myCoords.lengthY;
                         tag = E_UPDATE;
                         break;
                     case 4:
                         sendEdge = malloc(sizeof(char) * myCoords.lengthY);
                         for(int k = 0; k < myCoords.lengthY; k++)
                             sendEdge[k] = localBoard[(myCoords.lengthX + 2 + myCoords.lengthX) + k * (myCoords.lengthX + 2)];
-                        size = myCoords.lengthY;
+                        sendSize = myCoords.lengthY;
                         tag = W_UPDATE;
                         break;
                     case 5:
                         sendEdge = malloc(sizeof(char) * 1);
-                        sendEdge[0] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + 1];
-                        size = 1;
+                        sendEdge[0] = localBoard[((myCoords.lengthX + 2) * myCoords.lengthY) + 1];
+                        sendSize = 1;
                         tag = NE_UPDATE;
                         break;
                     case 6:
                         sendEdge = malloc(sizeof(char) * myCoords.lengthX);
                         for(int k = 0; k < myCoords.lengthX; k++)
                             sendEdge[k] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + 1 + k];
-                        size = myCoords.lengthX;
+                        sendSize = myCoords.lengthX;
                         tag = N_UPDATE;
                         break;
                     case 7:
                         sendEdge = malloc(sizeof(char) * 1);
                         sendEdge[0] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + myCoords.lengthX];
-                        size = 1;
+                        sendSize = 1;
                         tag = NW_UPDATE;
                         break;
                     }
 
                     memoryArray[memoryUsed++] = sendEdge;
 
-                    MPI_Isend(sendEdge, size, MPI_CHAR, myNeighborIDs[j], tag, MPI_COMM_WORLD, &lastRequest);
+                    MPI_Isend(sendEdge, sendSize, MPI_CHAR, myNeighborIDs[j], tag, MPI_COMM_WORLD, &lastRequest);
                 }
             }
 
@@ -335,53 +336,53 @@ void calculateBoard()
                 currentNeighbor = myNeighborIDs[j];
 
                 //Sets up the buffers and information that is going to be received
-                if(currentNeighbor >= 0)
+                if(currentNeighbor > -1)
                 {
                     switch(j)
                     {
                     case 0:
                         recvEdge = malloc(sizeof(char) * 1);
-                        size = 1;
+                        recvSize = 1;
                         tag = NW_UPDATE;
                         break;
                     case 1:
                         recvEdge = malloc(sizeof(char) * myCoords.lengthX);
-                        size = myCoords.lengthX;
+                        recvSize = myCoords.lengthX;
                         tag = N_UPDATE;
                         break;
                     case 2:
                         recvEdge = malloc(sizeof(char) * 1);
-                        size = 1;
+                        recvSize = 1;
                         tag = NE_UPDATE;
                         break;
                     case 3:
                         recvEdge = malloc(sizeof(char) * myCoords.lengthY);
-                        size = myCoords.lengthY;
+                        recvSize = myCoords.lengthY;
                         tag = W_UPDATE;
                         break;
                     case 4:
                         recvEdge = malloc(sizeof(char) * myCoords.lengthY);
-                        size = myCoords.lengthY;
+                        recvSize = myCoords.lengthY;
                         tag = E_UPDATE;
                         break;
                     case 5:
                         recvEdge = malloc(sizeof(char) * 1);
-                        size = 1;
+                        recvSize = 1;
                         tag = SW_UPDATE;
                         break;
                     case 6:
                         recvEdge = malloc(sizeof(char) * myCoords.lengthX);
-                        size = myCoords.lengthX;
+                        recvSize = myCoords.lengthX;
                         tag = S_UPDATE;
                         break;
                     case 7:
                         recvEdge = malloc(sizeof(char) * 1);
-                        size = 1;
+                        recvSize = 1;
                         tag = SE_UPDATE;
                         break;
                     }
 
-                    MPI_Recv(recvEdge, size, MPI_CHAR, currentNeighbor, tag, MPI_COMM_WORLD, &lastStatus);
+                    MPI_Recv(recvEdge, recvSize, MPI_CHAR, currentNeighbor, tag, MPI_COMM_WORLD, &lastStatus);
 
                     //Figures out what to do with the information
                     switch(tag)
@@ -398,11 +399,11 @@ void calculateBoard()
                         break;
                     case W_UPDATE:
                         for(int i = 0; i < myCoords.lengthY; i++)
-                            localBoard[myCoords.lengthX + 2 + (i * myCoords.lengthX + 2)] = recvEdge[i];
+                            localBoard[myCoords.lengthX + 2 + (i * (myCoords.lengthX + 2))] = recvEdge[i];
                         break;
                     case E_UPDATE:
                         for(int i = 0; i < myCoords.lengthY; i++)
-                            localBoard[myCoords.lengthX + 3 + myCoords.lengthX + (i * myCoords.lengthX + 2)] = recvEdge[i];
+                            localBoard[myCoords.lengthX + 3 + myCoords.lengthX + (i * (myCoords.lengthX + 2))] = recvEdge[i];
                         break;
                     case SW_UPDATE:
                         localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 1)] = recvEdge[0];
