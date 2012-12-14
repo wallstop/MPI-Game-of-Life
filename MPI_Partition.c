@@ -75,7 +75,6 @@ void freeMemory()
 /* Parses the input file character by character. Assumes proper file format of ITERATIONS\bCOLUMNS\bROWS\bARRAY_STUFF. Sets the resulting data to *currentGenBoard */
 void parseFile(int argc, char ** argv)
 {
-
     int numberOfProcesses;
 
     //Keeps track of the total number of *s and .s in the file
@@ -146,16 +145,6 @@ void finalizeBoard()
             incomingBoard = malloc(sizeof(char) * size);
 
             MPI_Recv(incomingBoard, size, MPI_CHAR, i, BOARD_MESSAGE, MPI_COMM_WORLD, &lastStatus);    //UPDATED COMM
-
-            for(int ip = 0; ip < size; ip++)
-            {
-                if(incomingBoard[ip] == 1)
-                    printf("*");
-                else
-                    printf(".");
-                if((ip + 1) % (partitionArray[i].lengthX+2) == 0)
-                    printf("\n");
-            }
 
             for(int k = 0; k < partitionArray[i].lengthY; k++)
             {
