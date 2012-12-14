@@ -6,7 +6,6 @@
 #include "GeometrySplitter.h"
 
 int identity;
-int requestedPartitions;
 int actualPartitions;
 struct partition *partitionArray;
 char* localBoard;
@@ -94,15 +93,8 @@ void parseFile(int argc, char ** argv)
     fscanf(filePtr, "%d", &numberOfGenerations);
     fscanf(filePtr, "%d", &masterBoard_columns);
     fscanf(filePtr, "%d", &masterBoard_rows);
-    fscanf(filePtr, "%d", &requestedPartitions);
 
-    if(numberOfProcesses < requestedPartitions)
-    {
-        printf("Too many processes requested, forcing number of processes to be: %d\n", numberOfProcesses);
-        requestedPartitions = numberOfProcesses;
-    }
-
-    actualPartitions = requestedPartitions; //CHANGE
+    actualPartitions = numberOfProcesses;
 
     //Allocates some memory based on the number of rows and columns found in the input file
     masterBoard = malloc(masterBoard_rows * masterBoard_columns * sizeof(char));
@@ -186,8 +178,6 @@ void finalizeBoard()
 
             MPI_Recv(incomingBoard, size, MPI_CHAR, i, BOARD_MESSAGE, MPI_COMM_WORLD, &lastStatus);    //UPDATED COMM
 
-            printf("\n\nIncoming Board to Master from Process:%d\n",i);
-            printf("Slave's StartX:%d StartY:%d\n",partitionArray[i].startX,partitionArray[i].startY);
             for(int ip = 0; ip < size; ip++)
             {
                 if(incomingBoard[ip] == 1)
@@ -198,15 +188,10 @@ void finalizeBoard()
                     printf("\n");
             }
 
-
             for(int k = 0; k < partitionArray[i].lengthY; k++)
             {
                 for(int j = 0; j < partitionArray[i].lengthX; j++)
                 {
-
-                    //= malloc(sizeof(char)*size);
-
-                    //Magic awesome sauce, here goes nothing...
                     int clientEquivLocation = ( (k+1) * (partitionArray[i].lengthX+2) + (j+1) );
 
                     //printf("Looking at client index: %d to master index: %d\n", clientEquivLocation, j + k * masterBoard_columns);
@@ -221,6 +206,8 @@ void finalizeBoard()
 
             //print board?
         }
+
+        printf("Final board configuration: \n");
 
         for(int i = 0; i < masterBoard_columns * masterBoard_rows; i++)
         {
@@ -243,29 +230,26 @@ void finalizeBoard()
 
 void initializeBoard(int argc, char ** argv)
 {
+    int * curLoopNeighbors;
+    int curLoopBoard_Size;
+    char * curLoopBoard;
+    int l;
 
     parseFile(argc, argv);
-    //partitionArray = malloc(sizeof(struct partition**)); //Malloc the space for the pointers to the structures
-    //partitionArray = malloc(sizeof(struct partition) * actualPartitions * sizeof(int));
-    //partitionArray = malloc(sizeof(struct partition) * actualPartitions);
-    partitionArray = generateBoard(masterBoard_columns, masterBoard_rows, &actualPartitions);
-    //for(int i = 0; i < actualPartitions; i++)
-    //    printf("Partition: %d X: %d Y: %d width: %d length: %d\n", i, partitionArray[i].startX, partitionArray[i].startY, partitionArray[i].lengthX, partitionArray[i].lengthY);
 
-    int * curLoopNeighbors;
-    //
+    partitionArray = generateBoard(masterBoard_columns, masterBoard_rows, &actualPartitions);
+
     for(int i = 0; i < actualPartitions; i++)
     {
-        //curLoopNeighbors = malloc(sizeof(int) * 8);
         curLoopNeighbors = neighborList(i);//Find the neighbors of the tile
         MPI_Isend(&partitionArray[i], sizeof(struct partition), MPI_BYTE, i, BOUNDS_MESSAGE, MPI_COMM_WORLD, &lastRequest);
         MPI_Isend(&numberOfGenerations, 1, MPI_INT, i, GENERATION_MESSAGE, MPI_COMM_WORLD ,&lastRequest);
         MPI_Isend(curLoopNeighbors, 8, MPI_INT, i, NEIGHBORLIST_MESSAGE, MPI_COMM_WORLD, &lastRequest);
 
-        int curLoopBoard_Size = (partitionArray[i].lengthX+2)*(partitionArray[i].lengthY+2);
-        char * curLoopBoard = malloc(sizeof(char) *curLoopBoard_Size);
+        curLoopBoard_Size = (partitionArray[i].lengthX+2)*(partitionArray[i].lengthY+2);
+        curLoopBoard = malloc(sizeof(char) *curLoopBoard_Size);
 
-        int l = 0;//position in the board to be sent to clients
+        l = 0;//position in the board to be sent to clients
 
         for(int k = partitionArray[i].startY - 1; k <= (partitionArray[i].startY + partitionArray[i].lengthY); k++)
         {
