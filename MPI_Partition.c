@@ -206,7 +206,7 @@ void initializeBoard(int argc, char ** argv)
     partitionArray = generateBoard(masterBoard_columns, masterBoard_rows, &actualPartitions);
 
     numberOfMemoryAllocations = actualPartitions;
-    allocatedMemory = malloc(sizeof(char*) * (numberOfMemoryAllocations));
+    allocatedMemory = malloc(sizeof(char*) * (numberOfMemoryAllocations + 8));
 
     for(int i = 0; i < actualPartitions; i++)
     {
@@ -498,6 +498,8 @@ void initMPI(int argc, char ** argv)
         MPI_Comm_size(MPI_COMM_WORLD, &actualPartitions);
         initializeBoard(argc, argv);
     }
+    else
+        allocatedMemory = malloc(sizeof(char*) * 8);
 
     MPI_Barrier(MPI_COMM_WORLD);
 
