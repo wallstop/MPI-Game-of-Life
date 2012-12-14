@@ -259,9 +259,9 @@ void initializeBoard(int argc, char ** argv)
 
         int l = 0;//position in the board to be sent to clients
 
-        for(int k = partitionArray[i].startY - 1; k <= partitionArray[i].lengthY; k++)
+        for(int k = partitionArray[i].startY - 1; k <= (partitionArray[i].startY + partitionArray[i].lengthY); k++)
         {
-            for(int j = partitionArray[i].startX - 1; j <= partitionArray[i].lengthX; j++)
+            for(int j = partitionArray[i].startX - 1; j <= (partitionArray[i].startX + partitionArray[i].lengthX); j++)
             {
                 if((k < 0) || (j < 0) || (k >= masterBoard_rows) || (j >= masterBoard_columns))
                     curLoopBoard[l++] = 0;
@@ -485,21 +485,6 @@ void calculateBoard()
             }
         }
 
-        /*
-            if(identity == 3)
-            {
-                for(int i = 0; i < (myCoords.lengthX + 2) * (myCoords.lengthY + 2); i++)
-                {
-                    if(nextGenBoard[i] == 1)
-                        printf("*");
-                    else
-                        printf(".");
-                    if((i + 1) % (myCoords.lengthX + 2) == 0)
-                        printf("\n");
-                }
-                printf("\n");
-            }
-            */
         printf("\nLocal Board Process:%d Generation:%d\n",identity,numberOfGenerations);
         for(int i = 0; i < (myCoords.lengthY+2) * (myCoords.lengthX+2); i++)
         {
