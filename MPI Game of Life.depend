@@ -1,0 +1,20 @@
+# depslib dependency file v1.0
+1355189335 source:/home/wallstop/Dropbox/Public/Homework/Distributed and Parallel/Open MPI Game of Life/MPI Game of Life/main.c
+	<stdio.h>
+	<mpi.h>
+
+1355458215 source:/home/wallstop/Dropbox/Public/Homework/Distributed and Parallel/Open MPI Game of Life/MPI Game of Life/GeometrySplitter.c
+	"GeometrySplitter.h"
+	<stdio.h>
+	<stdlib.h>
+	<stdbool.h>
+
+1355360511 /home/wallstop/Dropbox/Public/Homework/Distributed and Parallel/Open MPI Game of Life/MPI Game of Life/GeometrySplitter.h
+
+1355460308 source:/home/wallstop/Dropbox/Public/Homework/Distributed and Parallel/Open MPI Game of Life/MPI Game of Life/MPI_Partition.c
+	<stdio.h>
+	<stdlib.h>
+	<stdbool.h>
+	<mpi.h>
+	"GeometrySplitter.h"
+
