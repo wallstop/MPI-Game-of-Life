@@ -1,0 +1,25 @@
+This is the Game of Life program for OpenMPI wrought from the brains of Christopher Parish and Eli Pinkerton
+
+The board is split into rectangular regions and distributed to the processes launched from the mpirun invocation.
+
+The board definition is similar to the single threaded version as the number of processes wanted is now sent via the mpirun command.
+
+NumberOfGenerations
+Cols
+Rows
+board
+
+For Example
+20
+4
+4
+....
+.**.
+.**.
+....
+
+
+Here, '*' represents a living cell, and '.' represents a dead one
+
+to compile, call "mpicc MPI_Partition.c GeometrySplitter.c -std=c99"
+and to run, call "mpirun -n 2 a.out TestBoard.txt" where TestBoard.txt is the board file and 2 is the number of processes requested
