@@ -13,6 +13,7 @@ char* localBoard;
 char* nextGenBoard;
 char* masterBoard;
 
+bool isActiveProcess;
 //Used for masterBoard specifications
 int masterBoard_columns;
 int masterBoard_rows;
@@ -48,7 +49,8 @@ typedef enum
     PARTITION_MESSAGE,
     COMM_MESSAGE,
     ROW_MESSAGE,
-    COLUMN_MESSAGE
+    COLUMN_MESSAGE,
+    COMMUNICATOR_MESSAGE
 } tagType;
 
 bool isAlive(int x, int y); //Prototype
@@ -70,12 +72,13 @@ void parseFile(int argc, char ** argv)
 {
     //char textMatch[20];
     //int greatestNumThreads;
-
+    int numberOfProcesses;
     //Keeps track of the total number of *s and .s in the file
     int counter;
     //Keeps track of the current character being read from the file
     char currentChar;
 
+    MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcesses);
     counter = 0;
 
     FILE * filePtr = fopen(argv[1], "r");
@@ -92,6 +95,12 @@ void parseFile(int argc, char ** argv)
     fscanf(filePtr, "%d", &masterBoard_columns);
     fscanf(filePtr, "%d", &masterBoard_rows);
     fscanf(filePtr, "%d", &requestedPartitions);
+
+    if(numberOfProcesses < requestedPartitions)
+    {
+        printf("Too many processes requested, forcing number of processes to be: %d\n", numberOfProcesses);
+        requestedPartitions = numberOfProcesses;
+    }
 
     actualPartitions = requestedPartitions; //CHANGE
 
@@ -234,13 +243,12 @@ void finalizeBoard()
 
 void initializeBoard(int argc, char ** argv)
 {
+
     parseFile(argc, argv);
-    int rows = masterBoard_rows;
-    int columns = masterBoard_columns;
     //partitionArray = malloc(sizeof(struct partition**)); //Malloc the space for the pointers to the structures
     //partitionArray = malloc(sizeof(struct partition) * actualPartitions * sizeof(int));
     //partitionArray = malloc(sizeof(struct partition) * actualPartitions);
-    partitionArray = generateBoard(columns, rows, &actualPartitions);
+    partitionArray = generateBoard(masterBoard_columns, masterBoard_rows, &actualPartitions);
     //for(int i = 0; i < actualPartitions; i++)
     //    printf("Partition: %d X: %d Y: %d width: %d length: %d\n", i, partitionArray[i].startX, partitionArray[i].startY, partitionArray[i].lengthX, partitionArray[i].lengthY);
 
@@ -274,6 +282,8 @@ void initializeBoard(int argc, char ** argv)
         //free(curLoopBoard);
     }
 
+    printf("Initial board: \n\n");
+
     for(int i = 0; i < masterBoard_columns * masterBoard_rows; i++)
     {
         if(masterBoard[i] == 1)
@@ -286,15 +296,8 @@ void initializeBoard(int argc, char ** argv)
     for(int i = 0; i < actualPartitions; i++)
     {
         MPI_Isend(&actualPartitions, 1, MPI_INT, i, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastRequest);
-        //MPI_Isend(&masterBoard_columns, 1, MPI_INT, i, COLUMN_MESSAGE, MPI_COMM_WORLD, &lastRequest);
-        //MPI_Isend(&masterBoard_rows, 1, MPI_INT, i, ROW_MESSAGE, MPI_COMM_WORLD, &lastRequest);
-        //    MPI_Isend(&updatedComm, actualPartitions, MPI_INT, i, COMM_MESSAGE, MPI_COMM_WORLD, &lastRequest);
+
     }
-
-    //printf("Updating comm...\n");
-    //updateComm();
-
-    //printf("Comm updated!\n");
 }
 
 /* Updates the board */
@@ -303,208 +306,201 @@ void calculateBoard()
     char * sendEdge;
     int size;
     int tag;
-    //int rank;
 
     char * recvEdge;
     int currentNeighbor;
 
-    //MPI_Comm_rank(MPI_COMM_WORLD, &rank);  //UPDATED COMM
-
-    //printf("Current rank in updatedComm: %d\n", rank);
-    //printf("Number of generations: %d\n", numberOfGenerations);
-
-    if(identity == 0)
-        printf("Rows: %d Columns: %d\n", masterBoard_rows, masterBoard_columns);
-
     while(numberOfGenerations-- > 0)
     {
         /* Send */
-        for(int j = 0; j < 8; j++)
+        if(identity < actualPartitions)
         {
-            switch(j)
-            {
-            case 0:
-                sendEdge = malloc(sizeof(char) * 1);
-                sendEdge[0] = localBoard[myCoords.lengthX + 3];
-                size = 1;
-                tag = SE_UPDATE;
-                break;
-            case 1:
-                sendEdge = malloc(sizeof(char) * myCoords.lengthX);
-                for(int k = 0; k < myCoords.lengthX; k++)
-                    sendEdge[k] = localBoard[myCoords.lengthX + 3 + k];
-                size = myCoords.lengthX;
-                tag = S_UPDATE;
-                break;
-            case 2:
-                sendEdge = malloc(sizeof(char) * 1);
-                sendEdge[0] = localBoard[myCoords.lengthX + 2 + myCoords.lengthX];
-                size = 1;
-                tag = SW_UPDATE;
-                break;
-            case 3:
-                sendEdge = malloc(sizeof(char) * myCoords.lengthY);
-                for(int k = 0; k < myCoords.lengthY; k++)
-                    sendEdge[k] = localBoard[(myCoords.lengthX + 3) + k * (myCoords.lengthX + 2)];
-                size = myCoords.lengthY;
-                tag = E_UPDATE;
-                break;
-            case 4:
-                sendEdge = malloc(sizeof(char) * myCoords.lengthY);
-                for(int k = 0; k < myCoords.lengthY; k++)
-                    sendEdge[k] = localBoard[(myCoords.lengthX + 2 + myCoords.lengthX) + k * (myCoords.lengthX + 2)];
-                size = myCoords.lengthY;
-                tag = W_UPDATE;
-                break;
-            case 5:
-                sendEdge = malloc(sizeof(char) * 1);
-                sendEdge[0] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + 1];
-                size = 1;
-                tag = NE_UPDATE;
-                break;
-            case 6:
-                sendEdge = malloc(sizeof(char) * myCoords.lengthX);
-                for(int k = 0; k < myCoords.lengthX; k++)
-                    sendEdge[k] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + 1 + k];
-                size = myCoords.lengthX;
-                tag = N_UPDATE;
-                break;
-            case 7:
-                sendEdge = malloc(sizeof(char) * 1);
-                sendEdge[0] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + myCoords.lengthX];
-                size = 1;
-                tag = NW_UPDATE;
-                break;
-            }
-
-            if(myNeighborIDs[j] > -1)
-                MPI_Isend(sendEdge, size, MPI_CHAR, myNeighborIDs[j], tag, MPI_COMM_WORLD, &lastRequest);
-            //free(sendEdge);
-        }
-
-        /* Receive */
-        for(int j = 0; j < 8; j++)
-        {
-            currentNeighbor = myNeighborIDs[j];
-
-            //Sets up the buffers and information that is going to be received
-            if(currentNeighbor >= 0)
+            for(int j = 0; j < 8; j++)
             {
                 switch(j)
                 {
                 case 0:
-                    recvEdge = malloc(sizeof(char) * 1);
-                    size = 1;
-                    tag = NW_UPDATE;
-                    break;
-                case 1:
-                    recvEdge = malloc(sizeof(char) * myCoords.lengthX);
-                    size = myCoords.lengthX;
-                    tag = N_UPDATE;
-                    break;
-                case 2:
-                    recvEdge = malloc(sizeof(char) * 1);
-                    size = 1;
-                    tag = NE_UPDATE;
-                    break;
-                case 3:
-                    recvEdge = malloc(sizeof(char) * myCoords.lengthY);
-                    size = myCoords.lengthY;
-                    tag = W_UPDATE;
-                    break;
-                case 4:
-                    recvEdge = malloc(sizeof(char) * myCoords.lengthY);
-                    size = myCoords.lengthY;
-                    tag = E_UPDATE;
-                    break;
-                case 5:
-                    recvEdge = malloc(sizeof(char) * 1);
-                    size = 1;
-                    tag = SW_UPDATE;
-                    break;
-                case 6:
-                    recvEdge = malloc(sizeof(char) * myCoords.lengthX);
-                    size = myCoords.lengthX;
-                    tag = S_UPDATE;
-                    break;
-                case 7:
-                    recvEdge = malloc(sizeof(char) * 1);
+                    sendEdge = malloc(sizeof(char) * 1);
+                    sendEdge[0] = localBoard[myCoords.lengthX + 3];
                     size = 1;
                     tag = SE_UPDATE;
                     break;
+                case 1:
+                    sendEdge = malloc(sizeof(char) * myCoords.lengthX);
+                    for(int k = 0; k < myCoords.lengthX; k++)
+                        sendEdge[k] = localBoard[myCoords.lengthX + 3 + k];
+                    size = myCoords.lengthX;
+                    tag = S_UPDATE;
+                    break;
+                case 2:
+                    sendEdge = malloc(sizeof(char) * 1);
+                    sendEdge[0] = localBoard[myCoords.lengthX + 2 + myCoords.lengthX];
+                    size = 1;
+                    tag = SW_UPDATE;
+                    break;
+                case 3:
+                    sendEdge = malloc(sizeof(char) * myCoords.lengthY);
+                    for(int k = 0; k < myCoords.lengthY; k++)
+                        sendEdge[k] = localBoard[(myCoords.lengthX + 3) + k * (myCoords.lengthX + 2)];
+                    size = myCoords.lengthY;
+                    tag = E_UPDATE;
+                    break;
+                case 4:
+                    sendEdge = malloc(sizeof(char) * myCoords.lengthY);
+                    for(int k = 0; k < myCoords.lengthY; k++)
+                        sendEdge[k] = localBoard[(myCoords.lengthX + 2 + myCoords.lengthX) + k * (myCoords.lengthX + 2)];
+                    size = myCoords.lengthY;
+                    tag = W_UPDATE;
+                    break;
+                case 5:
+                    sendEdge = malloc(sizeof(char) * 1);
+                    sendEdge[0] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + 1];
+                    size = 1;
+                    tag = NE_UPDATE;
+                    break;
+                case 6:
+                    sendEdge = malloc(sizeof(char) * myCoords.lengthX);
+                    for(int k = 0; k < myCoords.lengthX; k++)
+                        sendEdge[k] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + 1 + k];
+                    size = myCoords.lengthX;
+                    tag = N_UPDATE;
+                    break;
+                case 7:
+                    sendEdge = malloc(sizeof(char) * 1);
+                    sendEdge[0] = localBoard[(myCoords.lengthX + 2) * myCoords.lengthY + myCoords.lengthX];
+                    size = 1;
+                    tag = NW_UPDATE;
+                    break;
                 }
 
-                MPI_Recv(recvEdge, size, MPI_CHAR, currentNeighbor, tag, MPI_COMM_WORLD, &lastStatus);
-
-                //Figures out what to do with the information
-                switch(tag)
-                {
-                case NW_UPDATE:
-                    localBoard[0] = recvEdge[0];
-                    break;
-                case N_UPDATE:
-                    for(int i = 0; i < myCoords.lengthX; i++)
-                        localBoard[1 + i] = recvEdge[i];
-                    break;
-                case NE_UPDATE:
-                    localBoard[myCoords.lengthX + 1] = recvEdge[0];
-                    break;
-                case W_UPDATE:
-                    for(int i = 0; i < myCoords.lengthY; i++)
-                        localBoard[myCoords.lengthX + 2 + (i * myCoords.lengthX + 2)] = recvEdge[i];
-                    break;
-                case E_UPDATE:
-                    for(int i = 0; i < myCoords.lengthY; i++)
-                        localBoard[myCoords.lengthX + 3 + myCoords.lengthX + (i * myCoords.lengthX + 2)] = recvEdge[i];
-                    break;
-                case SW_UPDATE:
-                    localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 1)] = recvEdge[0];
-                    break;
-                case S_UPDATE:
-                    for(int i = 0; i < myCoords.lengthX; i++)
-                        localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 1) + 1 + i] = recvEdge[i];
-                    break;
-                case SE_UPDATE:
-                    localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 2) - 1] = recvEdge[0];
-                    break;
-                }
-
-                free(recvEdge);
+                if(myNeighborIDs[j] > -1)
+                    MPI_Isend(sendEdge, size, MPI_CHAR, myNeighborIDs[j], tag, MPI_COMM_WORLD, &lastRequest);
+                //free(sendEdge);
             }
-        }
 
-        /* Does actual liveliness calculations */
-        for(int j = 0; j < (myCoords.lengthY + 2); j++)
-        {
-            for(int i = 0; i < (myCoords.lengthX + 2); i++)
+            /* Receive */
+            for(int j = 0; j < 8; j++)
             {
-                if(isAlive(i, j))
-                    setNextArray(i, j, 1);
-                else
-                    setNextArray(i, j, 0);
+                currentNeighbor = myNeighborIDs[j];
+
+                //Sets up the buffers and information that is going to be received
+                if(currentNeighbor >= 0)
+                {
+                    switch(j)
+                    {
+                    case 0:
+                        recvEdge = malloc(sizeof(char) * 1);
+                        size = 1;
+                        tag = NW_UPDATE;
+                        break;
+                    case 1:
+                        recvEdge = malloc(sizeof(char) * myCoords.lengthX);
+                        size = myCoords.lengthX;
+                        tag = N_UPDATE;
+                        break;
+                    case 2:
+                        recvEdge = malloc(sizeof(char) * 1);
+                        size = 1;
+                        tag = NE_UPDATE;
+                        break;
+                    case 3:
+                        recvEdge = malloc(sizeof(char) * myCoords.lengthY);
+                        size = myCoords.lengthY;
+                        tag = W_UPDATE;
+                        break;
+                    case 4:
+                        recvEdge = malloc(sizeof(char) * myCoords.lengthY);
+                        size = myCoords.lengthY;
+                        tag = E_UPDATE;
+                        break;
+                    case 5:
+                        recvEdge = malloc(sizeof(char) * 1);
+                        size = 1;
+                        tag = SW_UPDATE;
+                        break;
+                    case 6:
+                        recvEdge = malloc(sizeof(char) * myCoords.lengthX);
+                        size = myCoords.lengthX;
+                        tag = S_UPDATE;
+                        break;
+                    case 7:
+                        recvEdge = malloc(sizeof(char) * 1);
+                        size = 1;
+                        tag = SE_UPDATE;
+                        break;
+                    }
+
+                    MPI_Recv(recvEdge, size, MPI_CHAR, currentNeighbor, tag, MPI_COMM_WORLD, &lastStatus);
+
+                    //Figures out what to do with the information
+                    switch(tag)
+                    {
+                    case NW_UPDATE:
+                        localBoard[0] = recvEdge[0];
+                        break;
+                    case N_UPDATE:
+                        for(int i = 0; i < myCoords.lengthX; i++)
+                            localBoard[1 + i] = recvEdge[i];
+                        break;
+                    case NE_UPDATE:
+                        localBoard[myCoords.lengthX + 1] = recvEdge[0];
+                        break;
+                    case W_UPDATE:
+                        for(int i = 0; i < myCoords.lengthY; i++)
+                            localBoard[myCoords.lengthX + 2 + (i * myCoords.lengthX + 2)] = recvEdge[i];
+                        break;
+                    case E_UPDATE:
+                        for(int i = 0; i < myCoords.lengthY; i++)
+                            localBoard[myCoords.lengthX + 3 + myCoords.lengthX + (i * myCoords.lengthX + 2)] = recvEdge[i];
+                        break;
+                    case SW_UPDATE:
+                        localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 1)] = recvEdge[0];
+                        break;
+                    case S_UPDATE:
+                        for(int i = 0; i < myCoords.lengthX; i++)
+                            localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 1) + 1 + i] = recvEdge[i];
+                        break;
+                    case SE_UPDATE:
+                        localBoard[(myCoords.lengthX + 2) * (myCoords.lengthY + 2) - 1] = recvEdge[0];
+                        break;
+                    }
+
+                    //free(recvEdge);
+                }
             }
-        }
 
-        printf("\nLocal Board Process:%d Generation:%d\n",identity,numberOfGenerations);
-        for(int i = 0; i < (myCoords.lengthY+2) * (myCoords.lengthX+2); i++)
-        {
-            if(localBoard[i] == 1)
-                printf("*");
-            else
-                printf(".");
-            if((i + 1) % (myCoords.lengthX+2) == 0)
-                printf("\n");
-        }
+            /* Does actual liveliness calculations */
+            for(int j = 0; j < (myCoords.lengthY + 2); j++)
+            {
+                for(int i = 0; i < (myCoords.lengthX + 2); i++)
+                {
+                    if(isAlive(i, j))
+                        setNextArray(i, j, 1);
+                    else
+                        setNextArray(i, j, 0);
+                }
+            }
 
-        swapBoards();
+            printf("\nLocal Board Process:%d Generation:%d\n",identity,numberOfGenerations);
+            for(int i = 0; i < (myCoords.lengthY+2) * (myCoords.lengthX+2); i++)
+            {
+                if(localBoard[i] == 1)
+                    printf("*");
+                else
+                    printf(".");
+                if((i + 1) % (myCoords.lengthX+2) == 0)
+                    printf("\n");
+            }
+
+            swapBoards();
+        }
         MPI_Barrier(MPI_COMM_WORLD);   //Once done, chill out till everyon else is done.   //UPDATED COMM
     }
 
     MPI_Barrier(MPI_COMM_WORLD); //UPDATED COMM
 
-    printf("\nSending message from: %d Size: %d\n", identity, (myCoords.lengthX + 2) * (myCoords.lengthY + 2));
-
-    MPI_Isend(localBoard, (myCoords.lengthX + 2) * (myCoords.lengthY + 2), MPI_CHAR, 0, BOARD_MESSAGE, MPI_COMM_WORLD, &lastRequest);  //MPI_COMM
+    if(identity < actualPartitions)
+        MPI_Isend(localBoard, (myCoords.lengthX + 2) * (myCoords.lengthY + 2), MPI_CHAR, 0, BOARD_MESSAGE, MPI_COMM_WORLD, &lastRequest);  //MPI_COMM
 
     MPI_Barrier(MPI_COMM_WORLD); //UPDATED COMM
 }
@@ -552,6 +548,7 @@ void initMPI(int argc, char ** argv)
 
     if(!identity)
     {
+        isActiveProcess = true;
         MPI_Comm_size(MPI_COMM_WORLD, &actualPartitions);
         initializeBoard(argc, argv);
     }
@@ -559,9 +556,6 @@ void initMPI(int argc, char ** argv)
     MPI_Barrier(MPI_COMM_WORLD);
 
     MPI_Recv(&actualPartitions, 1, MPI_INT, 0, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastStatus);
-    //MPI_Recv(&masterBoard_columns, 1, MPI_INT, 0, COLUMN_MESSAGE, MPI_COMM_WORLD, &lastStatus);
-    //MPI_Recv(&masterBoard_rows, 1, MPI_INT, 0, ROW_MESSAGE, MPI_COMM_WORLD, &lastStatus);
-    //MPI_Recv(&updatedComm, actualPartitions, MPI_INT, 0, COMM_MESSAGE, MPI_COMM_WORLD, &lastStatus);
 
     if(identity < actualPartitions)
     {
@@ -574,20 +568,11 @@ void initMPI(int argc, char ** argv)
         nextGenBoard = malloc(sizeof(char) * localBoard_Size);
 
     }
-    else    //initializeBoard() will potentially chop off some processes. Un-needed processes are abandonded here
-    {
-        MPI_Finalize();
-        exit(1);
-    }
+    //Non-working processes do nothing.
 }
 
 void main(int argc, char ** argv)
 {
-    //masterBoard_columns = 10;
-    //masterBoard_rows = 10;
-    //requestedPartitions = 30;
-    //actualPartitions = requestedPartitions;
-
     initMPI(argc, argv);
 
     calculateBoard();
@@ -595,3 +580,4 @@ void main(int argc, char ** argv)
     finalizeBoard();
 
 }
+
