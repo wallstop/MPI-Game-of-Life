@@ -206,6 +206,8 @@ void initializeBoard(int argc, char ** argv)
 
     partitionArray = generateBoard(masterBoard_columns, masterBoard_rows, &actualPartitions);
 
+    printf("Forcing %d partitions\n", actualPartitions);
+
     numberOfMemoryAllocations = actualPartitions;
     allocatedMemory = malloc(sizeof(char*) * (numberOfMemoryAllocations + 8));
 
