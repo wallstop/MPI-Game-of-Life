@@ -190,10 +190,13 @@ void initializeBoard(int argc, char ** argv)
     int curLoopBoard_Size;
     char * curLoopBoard;
     int l;
+    int numberOfProcessors;
 
     parseFile(argc, argv);
 
     partitionArray = generateBoard(masterBoard_columns, masterBoard_rows, &actualPartitions);
+
+    MPI_Comm_size(MPI_COMM_WORLD, &numberOfProcessors);
 
     printf("Forcing %d partitions\n", actualPartitions);
 
@@ -204,7 +207,6 @@ void initializeBoard(int argc, char ** argv)
     {
         curLoopNeighbors = neighborList(i);//Find the neighbors of the tile
         MPI_Isend(&partitionArray[i], sizeof(struct partition), MPI_BYTE, i, BOUNDS_MESSAGE, MPI_COMM_WORLD, &lastRequest);
-        MPI_Isend(&numberOfGenerations, 1, MPI_INT, i, GENERATION_MESSAGE, MPI_COMM_WORLD ,&lastRequest);
         MPI_Isend(curLoopNeighbors, 8, MPI_INT, i, NEIGHBORLIST_MESSAGE, MPI_COMM_WORLD, &lastRequest);
 
         curLoopBoard_Size = (partitionArray[i].lengthX+2)*(partitionArray[i].lengthY+2);
@@ -239,8 +241,12 @@ void initializeBoard(int argc, char ** argv)
         if((i + 1) % (masterBoard_columns) == 0)
             printf("\n");
     }
+
     for(int i = 0; i < actualPartitions; i++)
         MPI_Isend(&actualPartitions, 1, MPI_INT, i, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastRequest);
+
+    for(int i = 0; i < numberOfProcessors; i++)
+        MPI_Isend(&numberOfGenerations, 1, MPI_INT, i, GENERATION_MESSAGE, MPI_COMM_WORLD ,&lastRequest);
 }
 
 /* Updates the board */
@@ -448,10 +454,12 @@ void calculateBoard()
             }
 
             printf("\n\n");
+
+            for(int i = 0; i < memoryUsed; i++)
+                free(memoryArray[i]);
         }
 
-        for(int i = 0; i < memoryUsed; i++)
-            free(memoryArray[i]);
+
 
         MPI_Barrier(MPI_COMM_WORLD);   //Once done, chill out till everyon else is done.   //UPDATED COMM
     }
@@ -520,10 +528,11 @@ void initMPI(int argc, char ** argv)
 
     MPI_Recv(&actualPartitions, 1, MPI_INT, 0, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastStatus);
 
+    MPI_Recv(&numberOfGenerations, 1, MPI_INT, 0, GENERATION_MESSAGE, MPI_COMM_WORLD, &lastStatus);
+
     if(identity < actualPartitions)
     {
         MPI_Recv(&myCoords, sizeof(struct partition), MPI_BYTE, 0, BOUNDS_MESSAGE, MPI_COMM_WORLD, &lastStatus);
-        MPI_Recv(&numberOfGenerations, 1, MPI_INT, 0, GENERATION_MESSAGE, MPI_COMM_WORLD, &lastStatus);
         MPI_Recv(myNeighborIDs, 8, MPI_INT, 0, NEIGHBORLIST_MESSAGE, MPI_COMM_WORLD, &lastStatus);
         localBoard_Size = (myCoords.lengthX + 2) * (myCoords.lengthY + 2);
         localBoard = malloc(sizeof(char) * localBoard_Size);
