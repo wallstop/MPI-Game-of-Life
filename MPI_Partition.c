@@ -144,7 +144,6 @@ void finalizeBoard()
         {
             size = (partitionArray[i].lengthX + 2) * (partitionArray[i].lengthY + 2);
             incomingBoard = malloc(sizeof(char) * size);
-            int masterArrayPosition = partitionArray[i].lengthX + partitionArray[i].startY * masterBoard_columns;
 
             MPI_Recv(incomingBoard, size, MPI_CHAR, i, BOARD_MESSAGE, MPI_COMM_WORLD, &lastStatus);    //UPDATED COMM
 
@@ -182,6 +181,9 @@ void finalizeBoard()
             if((i + 1) % (masterBoard_columns) == 0)
                 printf("\n");
         }
+
+        freeMemory();
+
         MPI_Barrier(MPI_COMM_WORLD);   //UPDATED COMM
     }
     else
@@ -189,7 +191,6 @@ void finalizeBoard()
         MPI_Barrier(MPI_COMM_WORLD);   //UPDATED COMM
     }
 
-    freeMemory();   //Frees all malloc'd memory
 
     MPI_Finalize();
 }
@@ -254,6 +255,9 @@ void initializeBoard(int argc, char ** argv)
 /* Updates the board */
 void calculateBoard()
 {
+    char *memoryArray[8];
+    int memoryUsed;
+
     char * sendEdge;
     int size;
     int tag;
@@ -263,6 +267,8 @@ void calculateBoard()
 
     while(numberOfGenerations-- > 0)
     {
+        memoryUsed = 0;
+
         /* Send */
         if(identity < actualPartitions)
         {
@@ -326,7 +332,7 @@ void calculateBoard()
                         break;
                     }
 
-                    allocatedMemory[numberOfMemoryAllocations++] = sendEdge;
+                    memoryArray[memoryUsed++] = sendEdge;
 
                     MPI_Isend(sendEdge, size, MPI_CHAR, myNeighborIDs[j], tag, MPI_COMM_WORLD, &lastRequest);
                 }
@@ -437,6 +443,9 @@ void calculateBoard()
 
             swapBoards();
         }
+
+        for(int i = 0; i < memoryUsed; i++)
+            free(memoryArray[i]);
 
         MPI_Barrier(MPI_COMM_WORLD);   //Once done, chill out till everyon else is done.   //UPDATED COMM
     }
