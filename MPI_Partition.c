@@ -441,20 +441,6 @@ void calculateBoard()
 
             swapBoards();
 
-            printf("Printing generation %d of board %d\n", numberOfGenerations, identity);
-
-            for(int m = 0; m < (myCoords.lengthY +2 ) * (myCoords.lengthX + 2); m++)
-            {
-                if(localBoard[m] == 1)
-                    printf("*");
-                else
-                    printf(".");
-                if((m+1) % (myCoords.lengthX +2) == 0)
-                    printf("\n");
-            }
-
-            printf("\n\n");
-
             for(int i = 0; i < memoryUsed; i++)
                 free(memoryArray[i]);
         }
