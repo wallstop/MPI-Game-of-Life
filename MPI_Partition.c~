@@ -17,6 +17,7 @@ char* localBoard;
 char* nextGenBoard;
 char* masterBoard;
 
+bool isActiveProcess;
 //Used for masterBoard specifications
 int masterBoard_columns;
 int masterBoard_rows;
@@ -504,25 +505,26 @@ void initMPI(int argc, char ** argv)
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &identity);
 
-    numberOfMemoryAllocations = 0;//Used for our garbage collection stuff
+    numberOfMemoryAllocations = 0;
 
-    if(!identity)//If we are the master
+    if(!identity)
     {
+        isActiveProcess = true;
         MPI_Comm_size(MPI_COMM_WORLD, &actualPartitions);
         initializeBoard(argc, argv);
     }
     else
         allocatedMemory = malloc(sizeof(char*) * 8);
 
-    MPI_Barrier(MPI_COMM_WORLD);//Wait here for eveybody (specifically the master)
+    MPI_Barrier(MPI_COMM_WORLD);
 
-    MPI_Recv(&actualPartitions, 1, MPI_INT, 0, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastStatus);//Get the previously send data about the number of partitions and generations
+    MPI_Recv(&actualPartitions, 1, MPI_INT, 0, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastStatus);
 
     MPI_Recv(&numberOfGenerations, 1, MPI_INT, 0, GENERATION_MESSAGE, MPI_COMM_WORLD, &lastStatus);
 
-    if(identity < actualPartitions)//If we are a process with work to do
+    if(identity < actualPartitions)
     {
-        MPI_Recv(&myCoords, sizeof(struct partition), MPI_BYTE, 0, BOUNDS_MESSAGE, MPI_COMM_WORLD, &lastStatus);//Recv the info we will need to do the work
+        MPI_Recv(&myCoords, sizeof(struct partition), MPI_BYTE, 0, BOUNDS_MESSAGE, MPI_COMM_WORLD, &lastStatus);
         MPI_Recv(myNeighborIDs, 8, MPI_INT, 0, NEIGHBORLIST_MESSAGE, MPI_COMM_WORLD, &lastStatus);
         localBoard_Size = (myCoords.lengthX + 2) * (myCoords.lengthY + 2);
         localBoard = malloc(sizeof(char) * localBoard_Size);
