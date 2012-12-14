@@ -242,7 +242,7 @@ void initializeBoard(int argc, char ** argv)
             printf("\n");
     }
 
-    for(int i = 0; i < actualPartitions; i++)
+    for(int i = 0; i < numberOfProcessors; i++)
         MPI_Isend(&actualPartitions, 1, MPI_INT, i, PARTITION_MESSAGE, MPI_COMM_WORLD, &lastRequest);
 
     for(int i = 0; i < numberOfProcessors; i++)
