@@ -441,6 +441,7 @@ struct partition * generateBoard(int width, int length, int * processes)
 {
     widthX = width;
     widthY = length;
+    *processes = width * length;
     numberOfPartitions = *processes;
 
     compareSides();
