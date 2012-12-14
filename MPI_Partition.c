@@ -160,7 +160,7 @@ void finalizeBoard()
             free(incomingBoard);
         }
 
-        printf("Final board configuration: \n");
+        printf("\nFinal board configuration: \n");
 
         for(int i = 0; i < masterBoard_columns * masterBoard_rows; i++)//Print out the board
         {
@@ -233,7 +233,7 @@ void initializeBoard(int argc, char ** argv)
         MPI_Isend(curLoopBoard, curLoopBoard_Size, MPI_CHAR, i, BOARD_MESSAGE, MPI_COMM_WORLD, &lastRequest);//Send the board
     }
 
-    printf("Initial board: \n\n");
+    printf("\nInitial board: \n");
 
     for(int i = 0; i < masterBoard_columns * masterBoard_rows; i++)
     {
